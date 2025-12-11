@@ -297,5 +297,4 @@ This tool can be extended to handle additional deprecated syntax patterns. The m
 
 ## 📄 License
 
-This tool is provided as-is for educational and practical use in SQL Server modernization projects.T e s t i n g   p a s s p h r a s e   c a c h i n g  
- 
+This tool is provided as-is for educational and practical use in SQL Server modernization projects.
