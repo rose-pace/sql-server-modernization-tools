@@ -72,7 +72,12 @@ END
 GO
 
 -- Function to modernize RAISERROR statements
-CREATE OR ALTER FUNCTION [dbo].[ModernizeRaiseError](@SqlText NVARCHAR(MAX))
+-- Using DROP/CREATE pattern for SQL Server 2012 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'ModernizeRaiseError' AND type IN ('FN', 'TF', 'IF'))
+    DROP FUNCTION [dbo].[ModernizeRaiseError]
+GO
+
+CREATE FUNCTION [dbo].[ModernizeRaiseError](@SqlText NVARCHAR(MAX))
 RETURNS NVARCHAR(MAX)
 AS
 BEGIN
@@ -175,7 +180,12 @@ END
 GO
 
 -- Function to modernize other deprecated syntax
-CREATE OR ALTER FUNCTION [dbo].[ModernizeDeprecatedSyntax](@SqlText NVARCHAR(MAX))
+-- Using DROP/CREATE pattern for SQL Server 2012 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'ModernizeDeprecatedSyntax' AND type IN ('FN', 'TF', 'IF'))
+    DROP FUNCTION [dbo].[ModernizeDeprecatedSyntax]
+GO
+
+CREATE FUNCTION [dbo].[ModernizeDeprecatedSyntax](@SqlText NVARCHAR(MAX))
 RETURNS NVARCHAR(MAX)
 AS
 BEGIN
@@ -204,7 +214,12 @@ END
 GO
 
 -- Main procedure to modernize stored procedures
-CREATE OR ALTER PROCEDURE [dbo].[ModernizeStoredProcedures]
+-- Using DROP/CREATE pattern for SQL Server 2012 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'ModernizeStoredProcedures' AND type = 'P')
+    DROP PROCEDURE [dbo].[ModernizeStoredProcedures]
+GO
+
+CREATE PROCEDURE [dbo].[ModernizeStoredProcedures]
     @SchemaName NVARCHAR(128) = NULL,
     @ProcedureName NVARCHAR(128) = NULL,
     @PreviewOnly BIT = 1,
@@ -361,7 +376,12 @@ END
 GO
 
 -- Utility procedure to review what would be changed
-CREATE OR ALTER PROCEDURE [dbo].[PreviewModernizationChanges]
+-- Using DROP/CREATE pattern for SQL Server 2012 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'PreviewModernizationChanges' AND type = 'P')
+    DROP PROCEDURE [dbo].[PreviewModernizationChanges]
+GO
+
+CREATE PROCEDURE [dbo].[PreviewModernizationChanges]
     @SchemaName NVARCHAR(128) = NULL,
     @ProcedureName NVARCHAR(128) = NULL
 AS
@@ -408,7 +428,12 @@ END
 GO
 
 -- Rollback procedure in case of issues
-CREATE OR ALTER PROCEDURE [dbo].[RollbackModernization]
+-- Using DROP/CREATE pattern for SQL Server 2012 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'RollbackModernization' AND type = 'P')
+    DROP PROCEDURE [dbo].[RollbackModernization]
+GO
+
+CREATE PROCEDURE [dbo].[RollbackModernization]
     @ProcedureName NVARCHAR(128),
     @SchemaName NVARCHAR(128) = 'dbo',
     @BackupId INT = NULL
