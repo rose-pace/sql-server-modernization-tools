@@ -369,7 +369,7 @@ BEGIN
         END
         
         SET @ErrorMessage = 'Error processing ' + ISNULL(@CurrentProcedure, 'unknown procedure') + 
-                           ': ' + ERROR_MESSAGE()
+                           ': ' + ERROR_MESSAGE();
         THROW 50000, @ErrorMessage, 1
     END CATCH
 END
@@ -456,7 +456,7 @@ BEGIN
         
         IF @OriginalDefinition IS NULL
         BEGIN
-            SET @ErrorMessage = 'No backup found for procedure: ' + @SchemaName + '.' + @ProcedureName
+            SET @ErrorMessage = 'No backup found for procedure: ' + @SchemaName + '.' + @ProcedureName;
             THROW 50000, @ErrorMessage, 1
         END
         
@@ -475,7 +475,7 @@ BEGIN
         
     END TRY
     BEGIN CATCH
-        SET @ErrorMessage = 'Error rolling back procedure: ' + ERROR_MESSAGE()
+        SET @ErrorMessage = 'Error rolling back procedure: ' + ERROR_MESSAGE();
         THROW 50000, @ErrorMessage, 1
     END CATCH
 END
