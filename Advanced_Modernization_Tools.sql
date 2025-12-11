@@ -10,8 +10,32 @@ more complex deprecated SQL Server patterns.
 USE [YourDatabaseName] -- Replace with your actual database name
 GO
 
+-- Check compatibility level for advanced features
+DECLARE @CompatLevel INT
+SELECT @CompatLevel = compatibility_level FROM sys.databases WHERE name = DB_NAME()
+
+IF @CompatLevel < 110
+BEGIN
+    PRINT 'WARNING: This script requires SQL Server 2012 compatibility (110) or higher for THROW statements'
+    PRINT 'Current level: ' + CAST(@CompatLevel AS NVARCHAR(10))
+    PRINT 'Upgrading to compatibility level 110...'
+    DECLARE @UpgradeSQL NVARCHAR(200) = 'ALTER DATABASE [' + DB_NAME() + '] SET COMPATIBILITY_LEVEL = 110'
+    EXEC sp_executesql @UpgradeSQL
+    PRINT 'Upgraded to compatibility level 110 - THROW statements and modern features enabled'
+END
+ELSE
+BEGIN
+    PRINT 'Compatibility level ' + CAST(@CompatLevel AS NVARCHAR(10)) + ' is sufficient for modern T-SQL features'
+END
+GO
+
 -- Advanced RAISERROR pattern detection function
-CREATE OR ALTER FUNCTION [dbo].[DetectRaiseErrorPatterns](@SqlText NVARCHAR(MAX))
+-- Using DROP/CREATE pattern for SQL Server 2008 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'DetectRaiseErrorPatterns' AND type IN ('FN', 'TF', 'IF'))
+    DROP FUNCTION [dbo].[DetectRaiseErrorPatterns]
+GO
+
+CREATE FUNCTION [dbo].[DetectRaiseErrorPatterns](@SqlText NVARCHAR(MAX))
 RETURNS TABLE
 AS
 RETURN
@@ -42,7 +66,12 @@ RETURN
 GO
 
 -- Function to analyze and categorize deprecated syntax
-CREATE OR ALTER FUNCTION [dbo].[AnalyzeDeprecatedSyntax](@SqlText NVARCHAR(MAX))
+-- Using DROP/CREATE pattern for SQL Server 2008 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'AnalyzeDeprecatedSyntax' AND type IN ('FN', 'TF', 'IF'))
+    DROP FUNCTION [dbo].[AnalyzeDeprecatedSyntax]
+GO
+
+CREATE FUNCTION [dbo].[AnalyzeDeprecatedSyntax](@SqlText NVARCHAR(MAX))
 RETURNS @Results TABLE (
     Category NVARCHAR(50),
     Issue NVARCHAR(100),
@@ -150,7 +179,12 @@ END
 GO
 
 -- Comprehensive analysis procedure
-CREATE OR ALTER PROCEDURE [dbo].[AnalyzeDatabaseForDeprecatedSyntax]
+-- Using DROP/CREATE pattern for SQL Server 2008 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'AnalyzeDatabaseForDeprecatedSyntax' AND type = 'P')
+    DROP PROCEDURE [dbo].[AnalyzeDatabaseForDeprecatedSyntax]
+GO
+
+CREATE PROCEDURE [dbo].[AnalyzeDatabaseForDeprecatedSyntax]
     @SchemaName NVARCHAR(128) = NULL,
     @DetailedReport BIT = 0,
     @SeverityFilter NVARCHAR(20) = NULL -- 'High', 'Medium', 'Low'
@@ -252,7 +286,12 @@ END
 GO
 
 -- Batch modernization with progress tracking
-CREATE OR ALTER PROCEDURE [dbo].[BatchModernizeWithProgress]
+-- Using DROP/CREATE pattern for SQL Server 2008 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'BatchModernizeWithProgress' AND type = 'P')
+    DROP PROCEDURE [dbo].[BatchModernizeWithProgress]
+GO
+
+CREATE PROCEDURE [dbo].[BatchModernizeWithProgress]
     @BatchSize INT = 10,
     @SchemaName NVARCHAR(128) = NULL,
     @PreviewOnly BIT = 1,
@@ -363,7 +402,12 @@ END
 GO
 
 -- Report generation procedure
-CREATE OR ALTER PROCEDURE [dbo].[GenerateModernizationReport]
+-- Using DROP/CREATE pattern for SQL Server 2008 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'GenerateModernizationReport' AND type = 'P')
+    DROP PROCEDURE [dbo].[GenerateModernizationReport]
+GO
+
+CREATE PROCEDURE [dbo].[GenerateModernizationReport]
     @OutputFormat NVARCHAR(10) = 'TABLE' -- 'TABLE' or 'HTML'
 AS
 BEGIN
