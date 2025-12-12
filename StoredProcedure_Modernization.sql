@@ -163,13 +163,38 @@ BEGIN
         
         DECLARE @OldLine NVARCHAR(1000) = SUBSTRING(@ModernizedText, @LineStart, @LineEnd - @LineStart)
         
-        -- Simple replacement for basic RAISERROR patterns
-        IF @OldLine LIKE 'RAISERROR [0-9]%'
+        -- Handle pattern: RAISERROR error_number message_variable
+        IF @OldLine LIKE '%RAISERROR [0-9]%' AND @OldLine NOT LIKE '%RAISERROR (%'
         BEGIN
-            DECLARE @NewLine NVARCHAR(1000) = REPLACE(@OldLine, 'RAISERROR ', 'THROW ') + ', 1'
-            IF @NewLine NOT LIKE '%,%,%'
-                SET @NewLine = REPLACE(@NewLine, 'THROW ', 'THROW 50000, ''Error: '' + CAST(')
-            SET @ModernizedText = REPLACE(@ModernizedText, @OldLine, @NewLine)
+            -- Extract error number and message variable
+            DECLARE @RaiseErrorStart INT = CHARINDEX('RAISERROR ', @OldLine) + 10
+            DECLARE @RestOfLine NVARCHAR(500) = LTRIM(SUBSTRING(@OldLine, @RaiseErrorStart, LEN(@OldLine) - @RaiseErrorStart + 1))
+            
+            -- Find first space to separate error number from message variable
+            DECLARE @SpacePos INT = CHARINDEX(' ', @RestOfLine)
+            IF @SpacePos > 0
+            BEGIN
+                DECLARE @ErrorNum NVARCHAR(10) = LTRIM(RTRIM(SUBSTRING(@RestOfLine, 1, @SpacePos - 1)))
+                DECLARE @MsgVar NVARCHAR(100) = LTRIM(RTRIM(SUBSTRING(@RestOfLine, @SpacePos + 1, LEN(@RestOfLine))))
+                
+                -- Clean up message variable (remove trailing semicolons, line breaks, etc.)
+                SET @MsgVar = RTRIM(REPLACE(REPLACE(REPLACE(@MsgVar, CHAR(13), ''), CHAR(10), ''), ';', ''))
+                
+                -- Create proper THROW statement with semicolon prefix
+                DECLARE @NewLine NVARCHAR(1000) = REPLACE(@OldLine, 
+                    'RAISERROR ' + @ErrorNum + ' ' + @MsgVar,
+                    ';THROW ' + @ErrorNum + ', ' + @MsgVar + ', 1')
+                
+                SET @ModernizedText = REPLACE(@ModernizedText, @OldLine, @NewLine)
+            END
+            ELSE
+            BEGIN
+                -- Fallback for malformed patterns - just add semicolon and basic conversion
+                DECLARE @FallbackLine NVARCHAR(1000) = ';' + REPLACE(@OldLine, 'RAISERROR ', 'THROW ')
+                IF @FallbackLine NOT LIKE '%,%,%'
+                    SET @FallbackLine = @FallbackLine + ', 1'
+                SET @ModernizedText = REPLACE(@ModernizedText, @OldLine, @FallbackLine)
+            END
         END
         ELSE
             BREAK -- Avoid infinite loop
