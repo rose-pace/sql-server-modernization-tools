@@ -83,15 +83,23 @@ AS
 BEGIN
     DECLARE @ModernizedText NVARCHAR(MAX) = @SqlText
     
+    -- Declare variables used across patterns
+    DECLARE @ErrorNum NVARCHAR(10)
+    DECLARE @StartPos INT, @LineStart INT, @LineEnd INT, @OpenParen INT, @ParenCount INT, @CurrentPos INT, @ClosePos INT
+    DECLARE @FullStatement NVARCHAR(1000), @Parameters NVARCHAR(500), @OldLine NVARCHAR(1000), @NewLine NVARCHAR(1000), @NewStatement NVARCHAR(1000)
+    DECLARE @ErrorNumber NVARCHAR(20), @Severity NVARCHAR(10), @State NVARCHAR(10), @Message NVARCHAR(500)
+    DECLARE @CommaPos1 INT, @CommaPos2 INT, @CommaPos3 INT
+    DECLARE @RaiseErrorStart INT, @RestOfLine NVARCHAR(500), @SpacePos INT, @MsgVar NVARCHAR(100), @FallbackLine NVARCHAR(1000)
+    
     -- Pattern 1: RAISERROR (error_number, severity, state)
     -- Convert to: THROW error_number, 'Custom message', 1
     WHILE CHARINDEX('RAISERROR (', @ModernizedText) > 0
     BEGIN
-        DECLARE @StartPos INT = CHARINDEX('RAISERROR (', @ModernizedText)
-        DECLARE @OpenParen INT = @StartPos + 10  -- Position after 'RAISERROR ('
-        DECLARE @ParenCount INT = 1
-        DECLARE @CurrentPos INT = @OpenParen
-        DECLARE @ClosePos INT = 0
+        SET @StartPos = CHARINDEX('RAISERROR (', @ModernizedText)
+        SET @OpenParen = @StartPos + 10  -- Position after 'RAISERROR ('
+        SET @ParenCount = 1
+        SET @CurrentPos = @OpenParen
+        SET @ClosePos = 0
         
         -- Find matching closing parenthesis
         WHILE @CurrentPos <= LEN(@ModernizedText) AND @ParenCount > 0
@@ -109,13 +117,10 @@ BEGIN
         
         IF @ClosePos > 0
         BEGIN
-            DECLARE @FullStatement NVARCHAR(1000) = SUBSTRING(@ModernizedText, @StartPos, @ClosePos - @StartPos + 1)
-            DECLARE @Parameters NVARCHAR(500) = SUBSTRING(@ModernizedText, @OpenParen, @ClosePos - @OpenParen)
+            SET @FullStatement = SUBSTRING(@ModernizedText, @StartPos, @ClosePos - @StartPos + 1)
+            SET @Parameters = SUBSTRING(@ModernizedText, @OpenParen, @ClosePos - @OpenParen)
             
             -- Parse parameters (error_number, severity, state[, message])
-            DECLARE @ErrorNumber NVARCHAR(20), @Severity NVARCHAR(10), @State NVARCHAR(10), @Message NVARCHAR(500)
-            DECLARE @CommaPos1 INT, @CommaPos2 INT, @CommaPos3 INT
-            
             SET @CommaPos1 = CHARINDEX(',', @Parameters)
             IF @CommaPos1 > 0
             BEGIN
@@ -141,20 +146,19 @@ BEGIN
             END
             
             -- Create modern THROW statement
-            DECLARE @NewStatement NVARCHAR(1000)
             
             -- Check if first parameter is a literal number or a variable
             IF ISNUMERIC(@ErrorNumber) = 1 AND @ErrorNumber NOT LIKE '@%' AND @ErrorNumber NOT LIKE '%(%'
             BEGIN
                 -- First parameter is a literal number - use as error number
-                DECLARE @ErrorNum INT = CAST(@ErrorNumber AS INT)
-                IF @ErrorNum < 50000
-                    SET @ErrorNum = 50000
+                DECLARE @ErrorNumInt INT = CAST(@ErrorNumber AS INT)
+                IF @ErrorNumInt < 50000
+                    SET @ErrorNumInt = 50000
                     
                 IF @Message IS NOT NULL AND LEN(@Message) > 0
-                    SET @NewStatement = ';THROW ' + CAST(@ErrorNum AS NVARCHAR(10)) + ', ' + @Message + ', ' + ISNULL(@State, '1')
+                    SET @NewStatement = ';THROW ' + CAST(@ErrorNumInt AS NVARCHAR(10)) + ', ' + @Message + ', ' + ISNULL(@State, '1')
                 ELSE
-                    SET @NewStatement = ';THROW ' + CAST(@ErrorNum AS NVARCHAR(10)) + ', ''An error occurred'', ' + ISNULL(@State, '1')
+                    SET @NewStatement = ';THROW ' + CAST(@ErrorNumInt AS NVARCHAR(10)) + ', ''An error occurred'', ' + ISNULL(@State, '1')
             END
             ELSE
             BEGIN
@@ -174,26 +178,26 @@ BEGIN
     -- Pattern 2: Simple RAISERROR error_number message_variable patterns
     WHILE PATINDEX('%RAISERROR [0-9]%', @ModernizedText) > 0
     BEGIN
-        DECLARE @LineStart INT = PATINDEX('%RAISERROR [0-9]%', @ModernizedText)
-        DECLARE @LineEnd INT = CHARINDEX(CHAR(13), @ModernizedText, @LineStart)
+        SET @LineStart = PATINDEX('%RAISERROR [0-9]%', @ModernizedText)
+        SET @LineEnd = CHARINDEX(CHAR(13), @ModernizedText, @LineStart)
         IF @LineEnd = 0 SET @LineEnd = CHARINDEX(CHAR(10), @ModernizedText, @LineStart)
         IF @LineEnd = 0 SET @LineEnd = LEN(@ModernizedText) + 1
         
-        DECLARE @OldLine NVARCHAR(1000) = SUBSTRING(@ModernizedText, @LineStart, @LineEnd - @LineStart)
+        SET @OldLine = SUBSTRING(@ModernizedText, @LineStart, @LineEnd - @LineStart)
         
         -- Handle pattern: RAISERROR error_number message_variable
         IF @OldLine LIKE '%RAISERROR [0-9]%' AND @OldLine NOT LIKE '%RAISERROR (%'
         BEGIN
             -- Extract error number and message variable
-            DECLARE @RaiseErrorStart INT = CHARINDEX('RAISERROR ', @OldLine) + 10
-            DECLARE @RestOfLine NVARCHAR(500) = LTRIM(SUBSTRING(@OldLine, @RaiseErrorStart, LEN(@OldLine) - @RaiseErrorStart + 1))
+            SET @RaiseErrorStart = CHARINDEX('RAISERROR ', @OldLine) + 10
+            SET @RestOfLine = LTRIM(SUBSTRING(@OldLine, @RaiseErrorStart, LEN(@OldLine) - @RaiseErrorStart + 1))
             
             -- Find first space to separate error number from message variable
-            DECLARE @SpacePos INT = CHARINDEX(' ', @RestOfLine)
+            SET @SpacePos = CHARINDEX(' ', @RestOfLine)
             IF @SpacePos > 0
             BEGIN
-                DECLARE @ErrorNum NVARCHAR(10) = LTRIM(RTRIM(SUBSTRING(@RestOfLine, 1, @SpacePos - 1)))
-                DECLARE @MsgVar NVARCHAR(100) = LTRIM(RTRIM(SUBSTRING(@RestOfLine, @SpacePos + 1, LEN(@RestOfLine))))
+                SET @ErrorNum = LTRIM(RTRIM(SUBSTRING(@RestOfLine, 1, @SpacePos - 1)))
+                SET @MsgVar = LTRIM(RTRIM(SUBSTRING(@RestOfLine, @SpacePos + 1, LEN(@RestOfLine))))
                 
                 -- Validate error number - THROW requires >= 50000 for custom errors
                 IF ISNUMERIC(@ErrorNum) = 1 AND CAST(@ErrorNum AS INT) < 50000
@@ -203,7 +207,7 @@ BEGIN
                 SET @MsgVar = RTRIM(REPLACE(REPLACE(REPLACE(@MsgVar, CHAR(13), ''), CHAR(10), ''), ';', ''))
                 
                 -- Create proper THROW statement with semicolon prefix
-                DECLARE @NewLine NVARCHAR(1000) = REPLACE(@OldLine, 
+                SET @NewLine = REPLACE(@OldLine, 
                     'RAISERROR ' + SUBSTRING(@RestOfLine, 1, @SpacePos - 1) + ' ' + SUBSTRING(@RestOfLine, @SpacePos + 1, LEN(@RestOfLine)),
                     ';THROW ' + @ErrorNum + ', ' + @MsgVar + ', 1')
                 
@@ -212,7 +216,7 @@ BEGIN
             ELSE
             BEGIN
                 -- Fallback for malformed patterns - just add semicolon and basic conversion
-                DECLARE @FallbackLine NVARCHAR(1000) = ';' + REPLACE(@OldLine, 'RAISERROR ', 'THROW ')
+                SET @FallbackLine = ';' + REPLACE(@OldLine, 'RAISERROR ', 'THROW ')
                 IF @FallbackLine NOT LIKE '%,%,%'
                     SET @FallbackLine = @FallbackLine + ', 1'
                 SET @ModernizedText = REPLACE(@ModernizedText, @OldLine, @FallbackLine)
