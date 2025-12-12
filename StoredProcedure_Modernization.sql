@@ -135,17 +135,35 @@ BEGIN
                     ELSE
                     BEGIN
                         SET @State = LTRIM(RTRIM(SUBSTRING(@Parameters, @CommaPos2 + 1, LEN(@Parameters) - @CommaPos2)))
-                        SET @Message = '''Error occurred'''
+                        SET @Message = NULL
                     END
                 END
             END
             
             -- Create modern THROW statement
             DECLARE @NewStatement NVARCHAR(1000)
-            IF @Message IS NOT NULL AND LEN(@Message) > 0
-                SET @NewStatement = 'THROW ' + @ErrorNumber + ', ' + @Message + ', ' + ISNULL(@State, '1')
+            
+            -- Check if first parameter is a literal number or a variable
+            IF ISNUMERIC(@ErrorNumber) = 1 AND @ErrorNumber NOT LIKE '@%' AND @ErrorNumber NOT LIKE '%(%'
+            BEGIN
+                -- First parameter is a literal number - use as error number
+                DECLARE @ErrorNum INT = CAST(@ErrorNumber AS INT)
+                IF @ErrorNum < 50000
+                    SET @ErrorNum = 50000
+                    
+                IF @Message IS NOT NULL AND LEN(@Message) > 0
+                    SET @NewStatement = ';THROW ' + CAST(@ErrorNum AS NVARCHAR(10)) + ', ' + @Message + ', ' + ISNULL(@State, '1')
+                ELSE
+                    SET @NewStatement = ';THROW ' + CAST(@ErrorNum AS NVARCHAR(10)) + ', ''An error occurred'', ' + ISNULL(@State, '1')
+            END
             ELSE
-                SET @NewStatement = 'THROW ' + @ErrorNumber + ', ''An error occurred'', ' + ISNULL(@State, '1')
+            BEGIN
+                -- First parameter is a variable or expression - treat as message, use default error number
+                IF @ErrorNumber LIKE '@%' OR @ErrorNumber LIKE '%(%'
+                    SET @NewStatement = ';THROW 50000, ' + @ErrorNumber + ', ' + ISNULL(@State, '1')
+                ELSE
+                    SET @NewStatement = ';THROW 50000, ''' + @ErrorNumber + ''', ' + ISNULL(@State, '1')
+            END
             
             SET @ModernizedText = REPLACE(@ModernizedText, @FullStatement, @NewStatement)
         END
