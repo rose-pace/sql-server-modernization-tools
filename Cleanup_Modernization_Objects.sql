@@ -41,7 +41,7 @@ BEGIN
     PRINT '4. Re-run this script'
     PRINT ''
     PRINT 'Objects that would be removed:'
-    PRINT '- Functions: ModernizeRaiseError, ModernizeDeprecatedSyntax'
+    PRINT '- Functions: ModernizeRaiseError, ModernizeDeprecatedSyntax, ConvertCreateToAlter'
     PRINT '- Functions: DetectRaiseErrorPatterns, AnalyzeDeprecatedSyntax'
     PRINT '- Procedures: ModernizeStoredProcedures, PreviewModernizationChanges'
     PRINT '- Procedures: RollbackModernization, AnalyzeDatabaseForDeprecatedSyntax'
@@ -102,6 +102,7 @@ DECLARE @FunctionList TABLE (FuncName NVARCHAR(128))
 INSERT INTO @FunctionList VALUES 
     ('ModernizeRaiseError'),
     ('ModernizeDeprecatedSyntax'),
+    ('ConvertCreateToAlter'),
     ('DetectRaiseErrorPatterns'),
     ('AnalyzeDeprecatedSyntax')
 

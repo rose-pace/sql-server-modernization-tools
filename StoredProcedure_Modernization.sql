@@ -264,6 +264,43 @@ BEGIN
 END
 GO
 
+-- Function to convert CREATE PROCEDURE/PROC to ALTER PROCEDURE/PROC
+-- Using DROP/CREATE pattern for SQL Server 2012 compatibility
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'ConvertCreateToAlter' AND type IN ('FN', 'TF', 'IF'))
+    DROP FUNCTION [dbo].[ConvertCreateToAlter]
+GO
+
+CREATE FUNCTION [dbo].[ConvertCreateToAlter](@SqlText NVARCHAR(MAX))
+RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+    DECLARE @ModernizedText NVARCHAR(MAX) = @SqlText
+    DECLARE @Pattern NVARCHAR(50), @StartPos INT, @EndPos INT, @OriginalText NVARCHAR(100), @ReplacedText NVARCHAR(100)
+    
+    -- Handle CREATE PROCEDURE (with any whitespace)
+    WHILE PATINDEX('%CREATE[ 	]%PROCEDURE%', @ModernizedText) > 0
+    BEGIN
+        SET @StartPos = PATINDEX('%CREATE[ 	]%PROCEDURE%', @ModernizedText)
+        SET @EndPos = CHARINDEX('PROCEDURE', @ModernizedText, @StartPos) + 8 -- 9-1 for PROCEDURE length
+        SET @OriginalText = SUBSTRING(@ModernizedText, @StartPos, @EndPos - @StartPos + 1)
+        SET @ReplacedText = REPLACE(@OriginalText, 'CREATE', 'ALTER')
+        SET @ModernizedText = REPLACE(@ModernizedText, @OriginalText, @ReplacedText)
+    END
+    
+    -- Handle CREATE PROC (with any whitespace) 
+    WHILE PATINDEX('%CREATE[ 	]%PROC %', @ModernizedText) > 0
+    BEGIN
+        SET @StartPos = PATINDEX('%CREATE[ 	]%PROC %', @ModernizedText)
+        SET @EndPos = CHARINDEX('PROC', @ModernizedText, @StartPos) + 3 -- 4-1 for PROC length  
+        SET @OriginalText = SUBSTRING(@ModernizedText, @StartPos, @EndPos - @StartPos + 1)
+        SET @ReplacedText = REPLACE(@OriginalText, 'CREATE', 'ALTER')
+        SET @ModernizedText = REPLACE(@ModernizedText, @OriginalText, @ReplacedText)
+    END
+    
+    RETURN @ModernizedText
+END
+GO
+
 -- Main procedure to modernize stored procedures
 -- Using DROP/CREATE pattern for SQL Server 2012 compatibility
 IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'ModernizeStoredProcedures' AND type = 'P')
@@ -325,10 +362,7 @@ BEGIN
             SET @ModernizedDefinition = @OriginalDefinition
             SET @ModernizedDefinition = [dbo].[ModernizeRaiseError](@ModernizedDefinition)
             SET @ModernizedDefinition = [dbo].[ModernizeDeprecatedSyntax](@ModernizedDefinition)
-            
-            -- Convert CREATE PROCEDURE to ALTER PROCEDURE for existing procedures
-            SET @ModernizedDefinition = REPLACE(@ModernizedDefinition, 'CREATE PROCEDURE', 'ALTER PROCEDURE')
-            SET @ModernizedDefinition = REPLACE(@ModernizedDefinition, 'CREATE PROC', 'ALTER PROC')
+            SET @ModernizedDefinition = [dbo].[ConvertCreateToAlter](@ModernizedDefinition)
             
             -- Check if any changes were made
             IF @ModernizedDefinition != @OriginalDefinition
@@ -401,6 +435,7 @@ BEGIN
                     -- Drop the helper functions
                     DROP FUNCTION IF EXISTS [dbo].[ModernizeRaiseError]
                     DROP FUNCTION IF EXISTS [dbo].[ModernizeDeprecatedSyntax]
+                    DROP FUNCTION IF EXISTS [dbo].[ConvertCreateToAlter]
                     
                     -- Drop utility procedures (but keep this main one until the end)
                     DROP PROCEDURE IF EXISTS [dbo].[PreviewModernizationChanges]
