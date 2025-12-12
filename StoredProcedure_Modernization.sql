@@ -332,6 +332,9 @@ BEGIN
         INNER JOIN sys.sql_modules m ON p.object_id = m.object_id
         WHERE (@SchemaName IS NULL OR SCHEMA_NAME(p.schema_id) = @SchemaName)
           AND (@ProcedureName IS NULL OR p.name = @ProcedureName)
+          AND p.name NOT LIKE 'dt[_]%'  -- Exclude database diagram system procedures
+          AND SCHEMA_NAME(p.schema_id) NOT IN ('sys', 'INFORMATION_SCHEMA')  -- Exclude system schemas
+          AND p.is_ms_shipped = 0  -- Exclude Microsoft-shipped procedures
           AND (
               m.definition LIKE '%RAISERROR%' 
               OR m.definition LIKE '%TEXT%' 
@@ -503,6 +506,9 @@ BEGIN
     INNER JOIN sys.sql_modules m ON p.object_id = m.object_id
     WHERE (@SchemaName IS NULL OR SCHEMA_NAME(p.schema_id) = @SchemaName)
       AND (@ProcedureName IS NULL OR p.name = @ProcedureName)
+      AND p.name NOT LIKE 'dt[_]%'  -- Exclude database diagram system procedures
+      AND SCHEMA_NAME(p.schema_id) NOT IN ('sys', 'INFORMATION_SCHEMA')  -- Exclude system schemas
+      AND p.is_ms_shipped = 0  -- Exclude Microsoft-shipped procedures
       AND (
           m.definition LIKE '%RAISERROR%' 
           OR m.definition LIKE '%TEXT%' 
