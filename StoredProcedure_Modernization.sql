@@ -304,6 +304,10 @@ BEGIN
             SET @ModernizedDefinition = [dbo].[ModernizeRaiseError](@ModernizedDefinition)
             SET @ModernizedDefinition = [dbo].[ModernizeDeprecatedSyntax](@ModernizedDefinition)
             
+            -- Convert CREATE PROCEDURE to ALTER PROCEDURE for existing procedures
+            SET @ModernizedDefinition = REPLACE(@ModernizedDefinition, 'CREATE PROCEDURE', 'ALTER PROCEDURE')
+            SET @ModernizedDefinition = REPLACE(@ModernizedDefinition, 'CREATE PROC', 'ALTER PROC')
+            
             -- Check if any changes were made
             IF @ModernizedDefinition != @OriginalDefinition
             BEGIN
