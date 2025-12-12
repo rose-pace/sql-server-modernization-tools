@@ -177,12 +177,16 @@ BEGIN
                 DECLARE @ErrorNum NVARCHAR(10) = LTRIM(RTRIM(SUBSTRING(@RestOfLine, 1, @SpacePos - 1)))
                 DECLARE @MsgVar NVARCHAR(100) = LTRIM(RTRIM(SUBSTRING(@RestOfLine, @SpacePos + 1, LEN(@RestOfLine))))
                 
+                -- Validate error number - THROW requires >= 50000 for custom errors
+                IF ISNUMERIC(@ErrorNum) = 1 AND CAST(@ErrorNum AS INT) < 50000
+                    SET @ErrorNum = '50000'
+                
                 -- Clean up message variable (remove trailing semicolons, line breaks, etc.)
                 SET @MsgVar = RTRIM(REPLACE(REPLACE(REPLACE(@MsgVar, CHAR(13), ''), CHAR(10), ''), ';', ''))
                 
                 -- Create proper THROW statement with semicolon prefix
                 DECLARE @NewLine NVARCHAR(1000) = REPLACE(@OldLine, 
-                    'RAISERROR ' + @ErrorNum + ' ' + @MsgVar,
+                    'RAISERROR ' + SUBSTRING(@RestOfLine, 1, @SpacePos - 1) + ' ' + SUBSTRING(@RestOfLine, @SpacePos + 1, LEN(@RestOfLine)),
                     ';THROW ' + @ErrorNum + ', ' + @MsgVar + ', 1')
                 
                 SET @ModernizedText = REPLACE(@ModernizedText, @OldLine, @NewLine)
