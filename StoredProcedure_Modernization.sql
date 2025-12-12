@@ -96,7 +96,7 @@ BEGIN
     WHILE CHARINDEX('RAISERROR (', @ModernizedText) > 0
     BEGIN
         SET @StartPos = CHARINDEX('RAISERROR (', @ModernizedText)
-        SET @OpenParen = @StartPos + 10  -- Position after 'RAISERROR ('
+        SET @OpenParen = @StartPos + 11  -- Position after 'RAISERROR ('
         SET @ParenCount = 1
         SET @CurrentPos = @OpenParen
         SET @ClosePos = 0
