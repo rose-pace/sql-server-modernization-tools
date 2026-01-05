@@ -333,6 +333,9 @@ BEGIN
         WHERE (@SchemaName IS NULL OR SCHEMA_NAME(p.schema_id) = @SchemaName)
           AND (@ProcedureName IS NULL OR p.name = @ProcedureName)
           AND p.name NOT LIKE 'dt[_]%'  -- Exclude database diagram system procedures
+          AND p.name NOT IN ('sp_alterdiagram', 'sp_creatediagram', 'sp_dropdiagram', 
+                              'sp_helpdiagramdefinition', 'sp_helpdiagrams', 
+                              'sp_renamediagram', 'sp_upgraddiagrams')  -- Exclude diagram system procedures
           AND SCHEMA_NAME(p.schema_id) NOT IN ('sys', 'INFORMATION_SCHEMA')  -- Exclude system schemas
           AND p.is_ms_shipped = 0  -- Exclude Microsoft-shipped procedures
           AND (
@@ -507,6 +510,9 @@ BEGIN
     WHERE (@SchemaName IS NULL OR SCHEMA_NAME(p.schema_id) = @SchemaName)
       AND (@ProcedureName IS NULL OR p.name = @ProcedureName)
       AND p.name NOT LIKE 'dt[_]%'  -- Exclude database diagram system procedures
+      AND p.name NOT IN ('sp_alterdiagram', 'sp_creatediagram', 'sp_dropdiagram', 
+                          'sp_helpdiagramdefinition', 'sp_helpdiagrams', 
+                          'sp_renamediagram', 'sp_upgraddiagrams')  -- Exclude diagram system procedures
       AND SCHEMA_NAME(p.schema_id) NOT IN ('sys', 'INFORMATION_SCHEMA')  -- Exclude system schemas
       AND p.is_ms_shipped = 0  -- Exclude Microsoft-shipped procedures
       AND (
